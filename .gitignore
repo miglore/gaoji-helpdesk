@@ -1,0 +1,21 @@
+# 凭据 —— 绝对不要提交
+secrets.env
+.env
+
+# 运行产物
+accept.log
+verify.log
+watchdog.log
+*.png
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.egg-info/
+
+# 编辑器
+.idea/
+.vscode/
+.DS_Store

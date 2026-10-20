@@ -1,0 +1,19 @@
+[Unit]
+Description=Gaoji Helpdesk auto ticket acceptor (pure API)
+Documentation=https://github.com/miglore/gaoji-helpdesk
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/gaoji-helpdesk
+# 凭据放在 600 权限的 secrets.env，不写进单元文件
+EnvironmentFile=%h/gaoji-helpdesk/secrets.env
+ExecStart=%h/gaoji-helpdesk/venv/bin/python %h/gaoji-helpdesk/gaoji_accept.py
+Restart=always
+RestartSec=15
+# 退出码 78 = 配置缺失，不要无限重启
+RestartPreventExitStatus=78
+
+[Install]
+WantedBy=default.target

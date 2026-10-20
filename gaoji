@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# KF5 帮助台自动接单 — 一键管理命令
+#
+# 用法:
+#   gaoji start     启动接单服务（含开机自启）
+#   gaoji stop      停止接单服务（并取消开机自启 = 真暂停）
+#   gaoji restart   重启接单服务
+#   gaoji status    查看服务状态
+#   gaoji check     体检：进程/日志/真实网络连接
+#   gaoji logs      实时跟踪日志
+#   gaoji tail      查看最近 30 行接单日志
+#
+# 安装: ln -s "$PWD/gaoji" ~/.local/bin/gaoji
+
+set -u
+
+SERVICE="gaoji-helpdesk.service"
+SELF_DIR="$(cd -- "$(dirname -- "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+LOG_FILE="${GAOJI_LOG_FILE:-$SELF_DIR/accept.log}"
+ACTION="${1:-status}"
+
+case "$ACTION" in
+  start)
+    systemctl --user enable "$SERVICE" >/dev/null 2>&1
+    systemctl --user start "$SERVICE" && echo "✅ 已启动（含开机自启）"
+    ;;
+  stop)
+    systemctl --user stop "$SERVICE" && echo "🛑 已停止"
+    systemctl --user disable "$SERVICE" >/dev/null 2>&1 \
+      && echo "🔒 已取消开机自启（真暂停，重启机器也不会自动恢复）"
+    ;;
+  restart)
+    systemctl --user restart "$SERVICE" && echo "🔄 已重启"
+    ;;
+  status)
+    systemctl --user status "$SERVICE" --no-pager -l | head -14
+    ;;
+  check)
+    printf '服务状态 : %s\n' "$(systemctl --user is-active "$SERVICE")"
+    printf '重启次数 : %s\n' "$(systemctl --user show "$SERVICE" -p NRestarts --value)"
+    printf '进程 PID : %s\n' "$(systemctl --user show "$SERVICE" -p MainPID --value)"
+    echo '--- 最近 3 条接单日志 ---'
+    tail -3 "$LOG_FILE" 2>/dev/null || echo "(无日志)"
+    echo '--- 到帮助台的真实连接（有 ESTAB 才是真在轮询）---'
+    PID="$(systemctl --user show "$SERVICE" -p MainPID --value)"
+    ss -tnp 2>/dev/null | grep -F "pid=$PID," || echo "(无活动连接)"
+    ;;
+  logs)
+    journalctl --user -u "$SERVICE" -f
+    ;;
+  tail)
+    tail -30 "$LOG_FILE"
+    ;;
+  *)
+    echo "用法: gaoji [start|stop|restart|status|check|logs|tail]"
+    exit 1
+    ;;
+esac
